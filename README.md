@@ -1,6 +1,3 @@
-# hanoi-game
-A classic Tower of Hanoi game
-
 Puzzle Games
 A small collection of browser-based puzzle games. Each game is a single self-contained HTML file — no install, no build step. Just download and open in a browser, or view live via GitHub Pages.
 Games
