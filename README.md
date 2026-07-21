@@ -1,6 +1,5 @@
 Puzzle Games
-A small collection of browser-based puzzle games. Each game is a single self-contained HTML file — no install, no build step. Just download and open in a browser, or view live via GitHub Pages.
-Games
+
 Tower of Hanoi — Inked
 A cel-shaded, 3D-tilted take on the classic disk-stacking puzzle.
 How to play
