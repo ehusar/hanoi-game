@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Tower of Hanoi — Inked</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Luckiest+Guy&family=Rubik:wght@500;700;900&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg-deep:#1b1035;
+    --bg-panel:#241548;
+    --ink:#120a1f;
+    --gold:#ffc93c;
+    --coral:#ff5d73;
+    --paper:#f4ecff;
+    --peg-color:#3d2a63;
+    --d1:#ff6b6b;
+    --d2:#ffd93d;
+    --d3:#6bcb77;
+    --d4:#4d96ff;
+    --d5:#c780fa;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;height:100%;}
+  body{
+    background:
+      radial-gradient(circle at 20% 10%, #2a1a52 0%, transparent 45%),
+      radial-gradient(circle at 85% 85%, #2a1a52 0%, transparent 40%),
+      var(--bg-deep);
+    color:var(--paper);
+    font-family:'Rubik', sans-serif;
+    min-height:100vh;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    padding:24px 14px 60px;
+    overflow-x:hidden;
+  }
+  h1{
+    font-family:'Luckiest Guy', cursive;
+    font-size:clamp(28px,6vw,46px);
+    letter-spacing:1px;
+    color:var(--gold);
+    text-shadow: 3px 3px 0 var(--ink), 6px 6px 0 rgba(0,0,0,.25);
+    margin:6px 0 2px;
+    text-align:center;
+  }
+  .subtitle{
+    font-size:13px;
+    opacity:.65;
+    margin-bottom:18px;
+    letter-spacing:.5px;
+  }
+
+  .hud{
+    display:flex;
+    gap:12px;
+    flex-wrap:wrap;
+    justify-content:center;
+    margin-bottom:22px;
+  }
+  .stat{
+    background:var(--bg-panel);
+    border:3px solid var(--ink);
+    border-radius:12px;
+    padding:10px 18px;
+    box-shadow:5px 5px 0 var(--ink);
+    text-align:center;
+    min-width:110px;
+  }
+  .stat .label{
+    font-size:11px;
+    text-transform:uppercase;
+    letter-spacing:1px;
+    opacity:.6;
+    font-weight:700;
+  }
+  .stat .value{
+    font-family:'Luckiest Guy', cursive;
+    font-size:26px;
+    color:var(--gold);
+    line-height:1.1;
+  }
+  .stat.best .value{color:#8affc1;}
+
+  .message{
+    min-height:30px;
+    font-weight:700;
+    font-size:15px;
+    text-align:center;
+    margin-bottom:10px;
+    padding:8px 16px;
+    border-radius:10px;
+    transition:opacity .2s ease;
+    max-width:520px;
+  }
+  .message.win{background:var(--gold);color:var(--ink);border:3px solid var(--ink);box-shadow:4px 4px 0 var(--ink);}
+  .message.fail{background:var(--coral);color:var(--ink);border:3px solid var(--ink);box-shadow:4px 4px 0 var(--ink);}
+  .message.milestone{background:#8affc1;color:var(--ink);border:3px solid var(--ink);box-shadow:4px 4px 0 var(--ink);}
+  .message.empty{opacity:0;}
+
+  /* ---- The Diorama ---- */
+  .stage-wrap{
+    perspective:1200px;
+    margin-top:6px;
+  }
+  .scene{
+    display:flex;
+    gap:36px;
+    transform: rotateX(10deg);
+    transform-style:preserve-3d;
+    padding:0 20px;
+  }
+  .peg-column{
+    position:relative;
+    width:140px;
+    height:300px;
+    display:flex;
+    flex-direction:column-reverse;
+    align-items:center;
+    cursor:pointer;
+  }
+  .floor{
+    position:absolute;
+    bottom:-14px;
+    left:50%;
+    transform:translateX(-50%);
+    width:160px;
+    height:26px;
+    background:
+      repeating-radial-gradient(circle at 20% 40%, #00000022 0 2px, transparent 3px 14px),
+      linear-gradient(#5b3d92, #452e73);
+    border:4px solid var(--ink);
+    border-radius:10px;
+    box-shadow:6px 8px 0 rgba(0,0,0,.4);
+    z-index:0;
+  }
+  .peg-rod{
+    position:absolute;
+    bottom:8px;
+    left:50%;
+    transform:translateX(-50%);
+    width:16px;
+    height:210px;
+    background:linear-gradient(90deg, #8a6bc9 0%, var(--peg-color) 45%, #2c1c4a 100%);
+    border:4px solid var(--ink);
+    border-radius:8px;
+    z-index:1;
+  }
+  .peg-column.selected .peg-rod{
+    box-shadow:0 0 0 4px var(--gold);
+  }
+  .peg-column .disks{
+    position:relative;
+    z-index:2;
+    display:flex;
+    flex-direction:column-reverse;
+    align-items:center;
+    width:100%;
+  }
+  .disk{
+    position:relative;
+    height:28px;
+    margin-bottom:-6px;
+    border-radius:14px;
+    border:4px solid var(--ink);
+    box-shadow:5px 5px 0 rgba(0,0,0,.55);
+    transition:transform .12s ease;
+  }
+  .disk::after{
+    /* top highlight cap for cylinder feel */
+    content:"";
+    position:absolute;
+    top:-7px;
+    left:8%;
+    width:84%;
+    height:12px;
+    border-radius:50%;
+    background:inherit;
+    filter:brightness(1.35);
+    border:4px solid var(--ink);
+  }
+  .disk.lifted{
+    transform:translateY(-16px);
+  }
+  .disk.d1{width:60px; background:linear-gradient(180deg, #ffb3b3 0%, var(--d1) 45%, #c93f3f 100%);}
+  .disk.d2{width:80px; background:linear-gradient(180deg, #fff0a8 0%, var(--d2) 45%, #cc9e0a 100%);}
+  .disk.d3{width:100px; background:linear-gradient(180deg, #b6f5bd 0%, var(--d3) 45%, #398a44 100%);}
+  .disk.d4{width:120px; background:linear-gradient(180deg, #b9d6ff 0%, var(--d4) 45%, #295fb0 100%);}
+  .disk.d5{width:140px; background:linear-gradient(180deg, #eac6ff 0%, var(--d5) 45%, #8b3ab0 100%);}
+
+  .peg-label{
+    position:absolute;
+    bottom:-42px;
+    font-family:'Luckiest Guy', cursive;
+    font-size:15px;
+    color:var(--paper);
+    opacity:.55;
+  }
+
+  .controls{
+    display:flex;
+    gap:14px;
+    margin-top:70px;
+    flex-wrap:wrap;
+    justify-content:center;
+  }
+  button{
+    font-family:'Rubik', sans-serif;
+    font-weight:700;
+    font-size:14px;
+    padding:12px 22px;
+    border-radius:10px;
+    border:3px solid var(--ink);
+    cursor:pointer;
+    box-shadow:4px 4px 0 var(--ink);
+    transition:transform .08s ease, box-shadow .08s ease;
+  }
+  button:active{
+    transform:translate(3px,3px);
+    box-shadow:1px 1px 0 var(--ink);
+  }
+  .btn-reset{background:var(--coral); color:var(--ink);}
+  .btn-disks{background:var(--paper); color:var(--ink);}
+
+  .disk-count{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    background:var(--bg-panel);
+    border:3px solid var(--ink);
+    border-radius:10px;
+    padding:6px 14px;
+    box-shadow:4px 4px 0 var(--ink);
+    font-weight:700;
+    font-size:13px;
+  }
+  .disk-count select{
+    font-family:'Rubik', sans-serif;
+    font-weight:700;
+    background:var(--paper);
+    border:2px solid var(--ink);
+    border-radius:6px;
+    padding:3px 6px;
+  }
+
+  .footnote{
+    margin-top:26px;
+    font-size:11px;
+    opacity:.4;
+    text-align:center;
+    max-width:400px;
+  }
+
+  @media (max-width:500px){
+    .scene{gap:14px; transform: rotateX(8deg) scale(.72);}
+    .controls{margin-top:40px;}
+  }
+
+  /* ---- Rules modal ---- */
+  .modal-overlay{
+    position:fixed;
+    inset:0;
+    background:rgba(10,5,25,.78);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    z-index:100;
+    padding:20px;
+  }
+  .modal-overlay.hidden{display:none;}
+  .modal-card{
+    background:var(--bg-panel);
+    border:4px solid var(--ink);
+    border-radius:16px;
+    box-shadow:8px 8px 0 var(--ink);
+    max-width:440px;
+    width:100%;
+    padding:26px 28px 24px;
+  }
+  .modal-card h2{
+    font-family:'Luckiest Guy', cursive;
+    color:var(--gold);
+    font-size:28px;
+    margin:0 0 14px;
+    text-shadow:2px 2px 0 var(--ink);
+  }
+  .modal-card ul{
+    margin:0 0 18px;
+    padding-left:20px;
+    font-size:14px;
+    line-height:1.65;
+  }
+  .modal-card li{margin-bottom:6px;}
+  .modal-card .modal-note{
+    font-size:12px;
+    opacity:.6;
+    margin-bottom:20px;
+    line-height:1.5;
+  }
+  .btn-start{
+    background:var(--gold);
+    color:var(--ink);
+    width:100%;
+    font-size:16px;
+    padding:13px;
+  }
+  .btn-help{
+    background:var(--paper);
+    color:var(--ink);
+    width:40px;
+    height:40px;
+    padding:0;
+    border-radius:50%;
+    font-size:16px;
+    line-height:1;
+  }
+</style>
+</head>
+<body>
+
+  <div class="modal-overlay" id="rulesModal">
+    <div class="modal-card">
+      <h2>How to Play</h2>
+      <ul>
+        <li>Click a peg to lift its top disk, then click another peg to drop it there.</li>
+        <li>Move the entire stack from peg A to peg C, one disk at a time.</li>
+        <li>A bigger disk can never rest on top of a smaller one.</li>
+        <li>Get it wrong and the tower resets — no partial credit, you start fresh.</li>
+        <li>Watch for a message at 15 moves and again at 30 moves.</li>
+        <li>Your best solve is tracked for this session.</li>
+      </ul>
+      <div class="modal-note">Tip: there's a keyboard shortcut somewhere in here for the truly curious.</div>
+      <button class="btn-start" id="startBtn">Let's Play</button>
+    </div>
+  </div>
+
+  <h1>Tower of Hanoi</h1>
+  <div class="subtitle">move the whole stack, smallest disk never rests on a bigger one</div>
+
+  <div class="hud">
+    <div class="stat">
+      <div class="label">Moves</div>
+      <div class="value" id="moveCount">0</div>
+    </div>
+    <div class="stat best">
+      <div class="label">Best Solve</div>
+      <div class="value" id="bestCount">—</div>
+    </div>
+    <div class="stat">
+      <div class="label">Minimum</div>
+      <div class="value" id="minMoves">31</div>
+    </div>
+  </div>
+
+  <div class="message empty" id="message"></div>
+
+  <div class="stage-wrap">
+    <div class="scene">
+      <div class="peg-column" data-peg="0">
+        <div class="floor"></div>
+        <div class="peg-rod"></div>
+        <div class="disks" id="peg0"></div>
+        <div class="peg-label">A</div>
+      </div>
+      <div class="peg-column" data-peg="1">
+        <div class="floor"></div>
+        <div class="peg-rod"></div>
+        <div class="disks" id="peg1"></div>
+        <div class="peg-label">B</div>
+      </div>
+      <div class="peg-column" data-peg="2">
+        <div class="floor"></div>
+        <div class="peg-rod"></div>
+        <div class="disks" id="peg2"></div>
+        <div class="peg-label">C</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="controls">
+    <div class="disk-count">
+      Disks
+      <select id="diskSelect">
+        <option value="3">3</option>
+        <option value="4">4</option>
+        <option value="5" selected>5</option>
+        <option value="6">6</option>
+        <option value="7">7</option>
+      </select>
+    </div>
+    <button class="btn-reset" id="resetBtn">Reset</button>
+    <button class="btn-help" id="helpBtn" title="How to play">?</button>
+  </div>
+
+  <div class="footnote">Best solve is remembered for this session only — it resets if you reload the page.</div>
+
+<script>
+(function(){
+  const paletteClasses = ['d1','d2','d3','d4','d5','d6','d7'];
+  // extend palette for up to 7 disks by reusing hues with variation via CSS classes d1..d5 then wrap
+  const state = {
+    numDisks: 5,
+    pegs: [[], [], []],
+    selectedPeg: null,
+    moveCount: 0,
+    bestMoves: null,
+    milestone15Shown: false,
+    milestone30Shown: false,
+    gameOver: false,
+    autoSolving: false
+  };
+
+  const pegEls = [document.getElementById('peg0'), document.getElementById('peg1'), document.getElementById('peg2')];
+  const pegColumnEls = Array.from(document.querySelectorAll('.peg-column'));
+  const moveCountEl = document.getElementById('moveCount');
+  const bestCountEl = document.getElementById('bestCount');
+  const minMovesEl = document.getElementById('minMoves');
+  const messageEl = document.getElementById('message');
+  const resetBtn = document.getElementById('resetBtn');
+  const diskSelect = document.getElementById('diskSelect');
+  const rulesModal = document.getElementById('rulesModal');
+  const startBtn = document.getElementById('startBtn');
+  const helpBtn = document.getElementById('helpBtn');
+
+  startBtn.addEventListener('click', () => rulesModal.classList.add('hidden'));
+  helpBtn.addEventListener('click', () => rulesModal.classList.remove('hidden'));
+
+  function diskClass(size, total){
+    // size 1 = smallest. Map proportionally into 5-color set so it still looks good with 3-7 disks
+    const ratio = (size - 1) / Math.max(1, total - 1); // 0..1
+    const idx = Math.round(ratio * 4) + 1; // 1..5
+    return 'd' + idx;
+  }
+
+  function initGame(){
+    state.numDisks = parseInt(diskSelect.value, 10);
+    state.pegs = [[], [], []];
+    for(let i = state.numDisks; i >= 1; i--){
+      state.pegs[0].push(i);
+    }
+    state.selectedPeg = null;
+    state.moveCount = 0;
+    state.milestone15Shown = false;
+    state.milestone30Shown = false;
+    state.gameOver = false;
+    state.autoSolving = false;
+    minMovesEl.textContent = Math.pow(2, state.numDisks) - 1;
+    setMessage('', '');
+    render();
+  }
+
+  function render(){
+    pegEls.forEach((el, i) => {
+      el.innerHTML = '';
+      state.pegs[i].forEach(size => {
+        const d = document.createElement('div');
+        d.className = 'disk ' + diskClass(size, state.numDisks);
+        d.style.width = (46 + size * (94 / state.numDisks)) + 'px';
+        el.appendChild(d);
+      });
+    });
+    pegColumnEls.forEach((col, i) => {
+      col.classList.toggle('selected', state.selectedPeg === i);
+    });
+    moveCountEl.textContent = state.moveCount;
+    bestCountEl.textContent = state.bestMoves === null ? '—' : state.bestMoves;
+  }
+
+  function setMessage(text, type){
+    messageEl.textContent = text;
+    messageEl.className = 'message' + (type ? ' ' + type : '') + (text ? '' : ' empty');
+  }
+
+  function checkMilestones(){
+    if(!state.milestone15Shown && state.moveCount === 15){
+      state.milestone15Shown = true;
+      setMessage("15 moves in — the tower's taking shape. Keep going!", 'milestone');
+    }
+    if(!state.milestone30Shown && state.moveCount === 30){
+      state.milestone30Shown = true;
+      setMessage("30 moves! You're deep in it now — stick with it.", 'milestone');
+    }
+  }
+
+  function checkWin(){
+    if(state.pegs[2].length === state.numDisks){
+      state.gameOver = true;
+      let winText = "Solved it! " + state.moveCount + " moves.";
+      if(!state.autoSolving){
+        if(state.bestMoves === null || state.moveCount < state.bestMoves){
+          state.bestMoves = state.moveCount;
+          winText += " New best!";
+        }
+      } else {
+        winText = "Solved automatically in " + state.moveCount + " moves. (super user demo — best score untouched)";
+      }
+      setMessage(winText, 'win');
+      render();
+      return true;
+    }
+    return false;
+  }
+
+  function failGame(reason){
+    state.gameOver = true;
+    setMessage(reason + " Starting over...", 'fail');
+    render();
+    setTimeout(() => {
+      initGame();
+    }, 3200);
+  }
+
+  function handlePegClick(pegIndex){
+    if(state.gameOver || state.autoSolving) return;
+
+    if(state.selectedPeg === null){
+      if(state.pegs[pegIndex].length === 0) return;
+      state.selectedPeg = pegIndex;
+      render();
+      return;
+    }
+
+    if(state.selectedPeg === pegIndex){
+      state.selectedPeg = null;
+      render();
+      return;
+    }
+
+    const fromPeg = state.selectedPeg;
+    const toPeg = pegIndex;
+    const movingDisk = state.pegs[fromPeg][state.pegs[fromPeg].length - 1];
+    const targetTop = state.pegs[toPeg][state.pegs[toPeg].length - 1];
+
+    state.selectedPeg = null;
+
+    if(targetTop !== undefined && targetTop < movingDisk){
+      failGame("A bigger disk can't land on a smaller one.");
+      return;
+    }
+
+    state.pegs[fromPeg].pop();
+    state.pegs[toPeg].push(movingDisk);
+    state.moveCount++;
+
+    render();
+    if(checkWin()) return;
+    checkMilestones();
+    if(!messageEl.textContent) setMessage('', '');
+  }
+
+  pegColumnEls.forEach(col => {
+    col.addEventListener('click', () => handlePegClick(parseInt(col.dataset.peg, 10)));
+  });
+
+  resetBtn.addEventListener('click', initGame);
+  diskSelect.addEventListener('change', initGame);
+
+  // ---------- Hidden super user auto-solve ----------
+  let keyBuffer = '';
+  const secretCode = 'hanoi';
+
+  document.addEventListener('keydown', (e) => {
+    if(e.key.length === 1){
+      keyBuffer = (keyBuffer + e.key.toLowerCase()).slice(-secretCode.length);
+      if(keyBuffer === secretCode && !state.autoSolving){
+        startAutoSolve();
+      }
+    }
+  });
+
+  function computeSolution(n, from, to, via, moves){
+    if(n === 0) return;
+    computeSolution(n - 1, from, via, to, moves);
+    moves.push([from, to]);
+    computeSolution(n - 1, via, to, from, moves);
+  }
+
+  function startAutoSolve(){
+    // restart clean so the demo solve is honest
+    initGame();
+    state.autoSolving = true;
+    setMessage("Super user mode engaged — solving step by step...", 'milestone');
+
+    const moves = [];
+    computeSolution(state.numDisks, 0, 2, 1, moves);
+
+    let i = 0;
+    const interval = setInterval(() => {
+      if(i >= moves.length){
+        clearInterval(interval);
+        return;
+      }
+      const [from, to] = moves[i];
+      const disk = state.pegs[from].pop();
+      state.pegs[to].push(disk);
+      state.moveCount++;
+      render();
+      i++;
+      if(i >= moves.length){
+        clearInterval(interval);
+        checkWin();
+      } else {
+        checkMilestones();
+      }
+    }, 550);
+  }
+
+  initGame();
+})();
+</script>
+</body>
+</html>
