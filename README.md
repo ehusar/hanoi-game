@@ -1,5 +1,3 @@
-Puzzle Games
-
 Tower of Hanoi — Inked
 A cel-shaded, 3D-tilted take on the classic disk-stacking puzzle.
 How to play
